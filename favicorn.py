@@ -51,9 +51,20 @@ class Favicon:
         self.base64_hash = codecs.encode('icon_hash="{}"'.format(self.murmur_hash).encode('utf-8'), 'base64').decode('utf-8').strip()
         self.hex_hash = hex(self.murmur_hash).replace('0x', '', 1)
 
+    def __eq__(self, other):
+        if isinstance(other, Favicon):
+            return self.murmur_hash == other.murmur_hash
+        return False
+
+    def __hash__(self):
+        return hash(self.murmur_hash)
+
+    def name(self):
+        return f'favicon from {self.type}: {self.source}'
+
     @classmethod
     def from_url(cls, url, custom_type="direct link"):
-        """Создаем объект Favicon из URL"""
+        """Create Favicon object from a URL"""
         response = requests.get(url, verify=False)
         if response.status_code == 200:
             favi_words = ['image', 'icon']
@@ -120,14 +131,14 @@ class Favicon:
         ])
         return links_bundle + '\n'
 
-
 class ZoomEyePreviewFetcher:
-    """Fetcher for getting results preview from ZoomEye based on favicon hash."""
+    """Stateless fetcher for getting results preview from ZoomEye based on favicon hash."""
 
-    def __init__(self):
-        """Initialize the fetcher with any necessary configuration."""
-        self.base_url = 'https://www.zoomeye.hk/api/search'
-        self.headers = {
+    @staticmethod
+    def get_info(favicon):
+        """Fetch information from ZoomEye based on the favicon object."""
+        base_url = 'https://www.zoomeye.hk/api/search'
+        headers = {
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,pt;q=0.6',
             'Connection': 'keep-alive',
@@ -141,82 +152,71 @@ class ZoomEyePreviewFetcher:
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"macOS"',
         }
-        self.total_results_count = 0  # Total results
-        self.domains = []  # List of domains (site + port)
-        self.ip_addresses_by_waf = {}  # Dictionary to store IP addresses by WAF
-        self.response_filename = "{hash_value}_zoomeye.json"
-
-    def get_info(self, favicon):
-        """Fetch information from ZoomEye based on the favicon object."""
-        url = f'{self.base_url}?q=iconhash%3A%22{favicon.murmur_hash}%22&page=1&t=v4%2Bv6%2Bweb'
-        referer = f'https://www.zoomeye.hk/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
-        self.headers['Referer'] = referer
         
-        # Send the request
-        response = requests.get(url, headers=self.headers)
+        url = f'{base_url}?q=iconhash%3A%22{favicon.murmur_hash}%22&page=1&t=v4%2Bv6%2Bweb'
+        referer = f'https://www.zoomeye.hk/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
+        headers['Referer'] = referer
+        
+        response = requests.get(url, headers=headers)
 
-        # Check if request was successful
         if response.status_code == 200:
             data = response.json()
-            self._save_response_to_file(data, favicon.murmur_hash)
-            self._parse_response(data)  # Parse the response to extract required fields
-            return self._format_output()  # Return formatted output
+            ZoomEyePreviewFetcher._save_response_to_file(data, favicon.murmur_hash)
+            total_results_count, domains, ip_addresses_by_waf = ZoomEyePreviewFetcher._parse_response(data)
+            return ZoomEyePreviewFetcher._format_output(total_results_count, domains, ip_addresses_by_waf, favicon.murmur_hash, favicon.name())
         else:
             return f"Request failed with status code {response.status_code}"
 
-    def _save_response_to_file(self, data, murmur_hash):
+    @staticmethod
+    def _save_response_to_file(data, murmur_hash):
         """Save the API response data to a JSON file with a formatted filename."""
-        filename = self.response_filename.format(hash_value=favicon.murmur_hash)
-        self.response_filename = filename
+        filename = f"{murmur_hash}_zoomeye.json"
         output_dir = "api_responses"
         os.makedirs(output_dir, exist_ok=True)
         file_path = os.path.join(output_dir, filename)
         with open(file_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
-        
-    def _parse_response(self, data):
+
+    @staticmethod
+    def _parse_response(data):
         """Extracts the total results count, domains, and IP addresses from the response."""
-        # Extract the total number of results
-        self.total_results_count = data.get('total', 0)
-        
-        # Extract domains and IP addresses from matches
+        total_results_count = data.get('total', 0)
+        domains = []
+        ip_addresses_by_waf = {}
+
         matches = data.get('matches', [])
         for match in matches:
             site = match.get('site', '')
             port = match.get('portinfo', {}).get('port', '')
             if site and port:
-                self.domains.append(f"{site}:{port}")
-            
-            # Extract IP addresses
-            ips = match.get('ip', [])
-            
-            # Handle case when ips is a single IP (string) instead of a list
-            if isinstance(ips, str):
-                ips = [ips]  # Convert to a list with a single element
+                domains.append(f"{site}:{port}")
 
-            # Extract WAF information
+            ips = match.get('ip', [])
+            if isinstance(ips, str):
+                ips = [ips]
+
             waf_list = match.get('waf', [])
             if waf_list:
                 waf_name = waf_list[0].get('name', {}).get('en', 'Unknown WAF')
             else:
                 waf_name = 'No WAF'
 
-            # Add IPs to the appropriate WAF group
-            if waf_name not in self.ip_addresses_by_waf:
-                self.ip_addresses_by_waf[waf_name] = []
-            self.ip_addresses_by_waf[waf_name].extend(ips)
+            if waf_name not in ip_addresses_by_waf:
+                ip_addresses_by_waf[waf_name] = []
+            ip_addresses_by_waf[waf_name].extend(ips)
 
-    def _format_output(self):
+        return total_results_count, domains, ip_addresses_by_waf
+
+    @staticmethod
+    def _format_output(total_results_count, domains, ip_addresses_by_waf, murmur_hash, name):
         """Format the output to display the total results count, domains, and IP addresses."""
         label_color = Fore.CYAN
-        result = f"\n{Style.BRIGHT}{Fore.BLUE}ZoomEye Results Preview\n"
-        result += f"{label_color}Total Results: {Fore.GREEN}{self.total_results_count}\n"
-        result += f"{label_color}Domains: {Fore.YELLOW}{', '.join(self.domains)}\n"
-        # Add IP addresses grouped by WAF
-        for waf, ips in self.ip_addresses_by_waf.items():
+        result = f"\n{Style.BRIGHT}{Fore.BLUE}ZoomEye Results Preview for {name}\n"
+        result += f"{label_color}Total Results: {Fore.GREEN}{total_results_count}\n"
+        result += f"{label_color}Domains: {Fore.YELLOW}{', '.join(domains)}\n"
+        for waf, ips in ip_addresses_by_waf.items():
             result += f"{label_color}IP Addresses ({waf}): {Fore.MAGENTA}{', '.join(ips)}\n"
-
-        result += f"\n{Fore.RED}ZoomEye JSON response saved to {self.response_filename}"
+        result += f"\n{Fore.RED}ZoomEye JSON response saved to {murmur_hash}_zoomeye.json"
         return result
 
 
@@ -237,7 +237,6 @@ def run_fetchers(favicons, fetchers):
                 except Exception as e:
                     results.append(f"Error occurred: {e}")
                 bar()  # Update the progress bar
-        bar()  # This makes sure that the bar reaches 100%
 
     result_index = 0
     for r in results:
@@ -245,10 +244,11 @@ def run_fetchers(favicons, fetchers):
 
 
 def make_se_links(domain):
-    links_bundle = '\n'.join((f'Google:      https://www.google.com/s2/favicons?domain={domain}&size=32',
-                              f'DuckDuckGo:  https://icons.duckduckgo.com/ip3/{domain}.ico',
-                              f'Unavatar:    https://unavatar.io/{domain}'))
-
+    links_bundle = [
+        ('Google', f'https://www.google.com/s2/favicons?domain={domain}&size=32'),
+        ('DuckDuckGo', f'https://icons.duckduckgo.com/ip3/{domain}.ico'),
+        ('Unavatar', f'https://unavatar.io/{domain}'),
+    ]
     return links_bundle
 
 
@@ -272,9 +272,9 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-f", "--file", help="Get favicon hash from a specific file")
-    parser.add_argument("-e", "--engines", help="Get favicon version using search engines")
+    parser.add_argument("-e", "--add-from-search-engines", action="store_true", help="Get additional favicon versions using search engines")
     parser.add_argument("-u", "--uri", help="Get favicon hash from WEB")
-    parser.add_argument("-r", "--resolve", help="Get favicon hash from resolved IP address")
+    parser.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
     parser.add_argument("--tinyurl", action="store_true", help="Get short links for results with TinyURL")
     args = parser.parse_args()
 
@@ -300,19 +300,27 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[-] Failed to load favicon from file: {e}")
 
-    elif args.resolve:
-        ips = resolve_domain(args.resolve)
+    elif args.domain:
+        ips = resolve_domain(args.domain)
         for ip in ips:
             try:
-                favicon = Favicon.from_url(f"http://{ip}/favicon.ico", custom_type=f"resolved domain '{args.resolve}'")
+                favicon = Favicon.from_url(f"http://{ip}/favicon.ico", custom_type=f"resolved domain '{args.domain}'")
                 if favicon:
                     favicons.append(favicon)
             except Exception as e:
                 print(f'[-] Error {e} for {ip}')
 
-    elif args.engines:
-        selist = make_se_links(args.engines)
-        favicons = None
+    if args.add_from_search_engines and args.domain:
+        unique_favicons = set(favicons)
+        urls = make_se_links(args.domain)
+        for url in urls:
+            try:
+                new_favicon = Favicon.from_url(url[1], custom_type=f'search engine {url[0]}')
+                if new_favicon not in unique_favicons:
+                    favicons.append(new_favicon)
+                    unique_favicons.add(new_favicon)
+            except Exception as e:
+                print(f"Error processing favicon from URL {url} from search engine {url[0]}: {e}")
 
     if favicons:
         for favicon in favicons:
@@ -321,12 +329,6 @@ if __name__ == "__main__":
             print(favicon.make_links())
             
         run_fetchers(favicons, fetchers)
-
-    elif selist:
-        print("[INFO] That icons might be different from favicon on the target! May be old copy or alternative?!")
-        print("[NOTE] Try to extend the scope with that results or just look at another image ;)\n")
-        print(selist)
-
     else:
         print("Nothing is found...")
 
