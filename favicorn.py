@@ -19,17 +19,16 @@ except ImportError as e:
     sys.exit(1)
 
 def make_links(hash, md5h, sha256h, b64h, hexh):
-    links_bundle = '\n'.join((f'ZoomEye:      https://www.zoomeye.org/searchResult?q=iconhash:"{hash}"',
+    links_bundle = '\n'.join((f'ZoomEye:      https://www.zoomeye.org/searchResult?q=iconhash%3A%22{hash}%22',
                               f'Shodan:       https://www.shodan.io/search?query=http.favicon.hash:{hash}',
                               f'Fofa:         https://en.fofa.info/result?qbase64={b64h}',
                               f'VirusTotal:   https://www.virustotal.com/gui/search/entity:url%20main_icon_md5:{md5h}',
                               f'BinaryEdge:   https://app.binaryedge.io/services/query?query=web.favicon.md5:{md5h}&page=1',
                               f'Netlas:       https://app.netlas.io/responses/?q=http.favicon.hash_sha256:{sha256h}&page=1',
                               f'Censys:       https://search.censys.io/search?resource=hosts&sort=RELEVANCE&per_page=25&virtual_hosts=EXCLUDE&q=services.http.response.favicons.md5_hash:{md5h}',
-                              f'ODIN:         https://getodin.com/search/hosts?query=services.modules.http.favicon.murmur_hash:"{hash}"',
+                              f'ODIN:         https://getodin.com/search/hosts?query=services.modules.http.favicon.murmur_hash%3A%22{hash}%22',
                               f'CriminalIP:   https://www.criminalip.io/asset/search?query=favicon:+{hexh}',
-                              f'HunterHow:    https://hunter.how/list?searchValue=favicon_hash:"{hash}"'))
-
+                              f'HunterHow:    https://hunter.how/list?searchValue=favicon_hash%3A%22{hash}%22'))
     return links_bundle
 
 def make_se_links(domain):

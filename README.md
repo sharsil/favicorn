@@ -2,8 +2,36 @@
 
 All-sources tool to search websites by favicons.
 
+## The mechanism
+
+Favicorn takes favicon (url, filename) as an input, and gives you links to search results in 10 platforms. 
+
+Put ⭐ to the repo, so we'll implement automatic scraping of all sources!
+
 ## Usage
 
 ```sh
 $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 ```
+
+## Supported platforms
+
+| Name        | Login required | Approx quality |
+|-------------|----------------|----------------|
+| ZoomEye     |      yes       |      good      |
+| Shodan      |      yes       |                |
+| Fofa        |       no       |      low       |
+| VirusTotal  |       no       |                |
+| BinaryEdge  |      yes       |                |
+| Netlas      |       no       |                |
+| Censys      |       no       |                |
+| ODIN        |       no       |                |
+| CriminalIP  |      yes       |                |
+| HunterHow   |      yes       |                |
+
+## Use cases
+
+- Search for C2 (command and control) servers of hackers
+- Search for phishing domains
+- Extend your scope for pentesting
+- Research purposes
