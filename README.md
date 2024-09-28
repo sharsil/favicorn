@@ -21,7 +21,7 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 | ZoomEye     |      yes       |      good      |
 | Shodan      |      yes       |                |
 | Fofa        |       no       |      low       |
-| VirusTotal  |       no       |                |
+| VirusTotal  |      yes       |                |
 | BinaryEdge  |      yes       |                |
 | Netlas      |       no       |                |
 | Censys      |       no       |                |
@@ -35,3 +35,9 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 - Search for phishing domains
 - Extend your scope for pentesting
 - Research purposes
+
+## Other relevant tools
+
+- [Favicon-Search](https://github.com/truda8/Favicon-Search)
+- [favihunter](https://github.com/eremit4/favihunter)
+- [favfound](https://github.com/elihypoo414/favfound)
