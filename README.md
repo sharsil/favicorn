@@ -46,6 +46,7 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 - [favicon](https://github.com/scottwernervt/favicon)
 - [pyfav](https://github.com/phillipsm/pyfav)
 - [besticon (favicon-service)](https://github.com/mat/besticon/)
+- [favicongrabber.com](https://github.com/antongunov/favicongrabber.com)
 
 ## Testing
 

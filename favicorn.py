@@ -105,9 +105,9 @@ class Favicon:
             'BinaryEdge': f'https://app.binaryedge.io/services/query?query=web.favicon.md5:{self.md5_hash}&page=1',
             'Netlas': f'https://app.netlas.io/responses/?q=http.favicon.hash_sha256:{self.sha256_hash}&page=1',
             'Censys': f'https://search.censys.io/search?resource=hosts&sort=RELEVANCE&per_page=25&virtual_hosts=EXCLUDE&q=services.http.response.favicons.md5_hash:{self.md5_hash}',
-            'ODIN': f'https://getodin.com/search/hosts?query=services.modules.http.favicon.murmur_hash%3A%22{self.murmur_hash}%22',
+            'ODIN': f'https://search.odin.io/hosts?query=services.modules.http.favicon.murmur_hash%3A%22{self.murmur_hash}%22',
             'CriminalIP': f'https://www.criminalip.io/asset/search?query=favicon:+{self.hex_hash}',
-            'HunterHow': f'https://hunter.how/list?searchValue=favicon_hash%3A%22{self.murmur_hash}%22'
+            'HunterHow': f'https://hunter.how/list?searchValue=favicon_hash%3D%22{self.md5_hash}%22'
         }
 
         if self.tinyurl:
@@ -121,7 +121,16 @@ class Favicon:
         links_dict = self.generate_links_dict()
         return list(links_dict.keys())
 
-    def make_links(self):
+    def hashes_text(self):
+        return '\n'.join([
+            f'{Fore.CYAN}{Style.BRIGHT}MurMurHash(Base64): {Style.NORMAL}{self.murmur_hash}',
+            f'{Fore.CYAN}{Style.BRIGHT}MD5(Favicon):       {Style.NORMAL}{self.md5_hash}',
+            f'{Fore.CYAN}{Style.BRIGHT}SHA256(Favicon):    {Style.NORMAL}{self.sha256_hash}',
+            f'{Fore.CYAN}{Style.BRIGHT}Base64(MurMurHash): {Style.NORMAL}{self.base64_hash}',
+            f'{Fore.CYAN}{Style.BRIGHT}Hex(MurMurHash):    {Style.NORMAL}{self.hex_hash}',
+        ])
+
+    def links_text(self):
         """Generate the same text output as the original function with aligned columns"""
         links_dict = self.generate_links_dict()
         
@@ -409,7 +418,10 @@ def make_se_links(domain):
         ('Google 16x16', f'https://www.google.com/s2/favicons?domain={domain}&size=16'),
         ('Google 32x32', f'https://www.google.com/s2/favicons?domain={domain}&size=32'),
         ('DuckDuckGo', f'https://icons.duckduckgo.com/ip3/{domain}.ico'),
-        ('Unavatar', f'https://unavatar.io/{domain}'),
+        ('Icon Horse', f'https://icon.horse/icon/{domain}'),
+        # Useless
+        # ('Unavatar', f'https://unavatar.io/{domain}'),
+        # ('Yandex', f'https://favicon.yandex.net/favicon/{domain}'),
     ]
     return links_bundle
 
@@ -439,6 +451,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
     parser.add_argument("--tinyurl", action="store_true", help="Get short links for results with TinyURL")
     parser.add_argument("--no-fetch", action="store_true", default=False, help="Don't fetch results from engines")
+    parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Verbose (show hashes)")
     args = parser.parse_args()
 
     selist = []
@@ -518,7 +531,9 @@ if __name__ == "__main__":
         for favicon in favicons:
             favicon.tinyurl = args.tinyurl
             print(f"\nResults for favicon from {favicon.type}: {favicon.source}\n")
-            print(favicon.make_links())
+            if args.verbose:
+                print(favicon.hashes_text()+'\n')
+            print(favicon.links_text())
 
         if args.no_fetch:
             print("Fetching of results is disabled, exiting.")
@@ -543,23 +558,4 @@ if __name__ == "__main__":
                 print(f'{Fore.GREEN}Preview results for favicon with MurmurHash {favicon.murmur_hash} was saved to {filename}')
     else:
         print("No results found.")
-
-
-# Тут нашел способ поиска фавиконок через поисковики, есть еще другие но не вижу смысла добавлять их, это самые большие
-# Зачем это нужно? Тут может быть другая фавиконка можно потом по ней поискать и найти много другой инфы, может это надо указать при выдаче
-### https://dev.to/derlin/get-favicons-from-any-website-using-a-hidden-google-api-3p1e
-# https://www.google.com/s2/favicons?domain=${domain}&sz=${size}
-# https://icons.duckduckgo.com/ip3/dev.to.ico
-# https://icon.horse/icon/bi.zone
-
-# Это описано в PDF, для автопоиска иконок надо заморочиться, вдохну в себя мотивацию только....
-# search icon: curl -skL https://bi.zone | grep "link rel="
-
-
-# Это нечто похожее, но наше будет отцом для этого!
-# https://github.com/eremit4/favihunter/blob/main/favihunter.py
-# https://github.com/elihypoo414/favfound/blob/main/favfound.py
-
-#
-# https://stackoverflow.com/questions/64526263/how-to-show-my-website-favicon-in-bings-search-engine
 
