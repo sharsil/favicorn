@@ -6,7 +6,6 @@ import requests
 import hashlib
 import json
 import codecs
-import shodan
 from colorama import Fore, Style, init
 from alive_progress import alive_bar
 import concurrent.futures
@@ -14,6 +13,10 @@ import favicon
 import sys
 import re
 import os
+
+# fetchers
+import shodan
+import netlas
 
 # tinyurl
 from urllib.parse import urlencode, uses_netloc
@@ -322,6 +325,64 @@ class ZoomEyePreviewFetcher(Fetcher):
         return total_results_count, domains, ip_addresses_by_waf
 
 
+class NetlasPreviewAPIKeyFetcher(Fetcher):
+    """Stateless fetcher for getting results from Netlas based on favicon hash."""
+    
+    def __init__(self, api_key, use_cache=True):
+        self.api_key = api_key
+        self.use_cache = use_cache
+
+    @classmethod
+    def get_platform(cls):
+        return 'Netlas'
+
+    def get_info(self, favicon):
+        """Fetch information from Netlas based on the favicon object using its API key."""
+        netlas_connection = netlas.Netlas(api_key=self.api_key)
+        murmur_hash = favicon.murmur_hash
+
+        try:
+            result = None
+            if self.use_cache:
+                result = NetlasPreviewAPIKeyFetcher._load_response_from_file(murmur_hash)  # cached response
+
+            if not result:
+                query_string = f'http.favicon.hash_sha256:{favicon.sha256_hash}'
+                result = netlas_connection.query(query=query_string)
+                NetlasPreviewAPIKeyFetcher._save_response_to_file(result, murmur_hash)
+
+            total_results_count, domains, ip_addresses_by_waf = NetlasPreviewAPIKeyFetcher._parse_response(result)
+            output = NetlasPreviewAPIKeyFetcher._format_output(total_results_count, domains, ip_addresses_by_waf, murmur_hash, favicon.name())
+            return domains, ip_addresses_by_waf, output
+
+        except Exception as e:
+            return [], {}, f"Netlas API request failed: {str(e)}"
+
+    @staticmethod
+    def _parse_response(data):
+        """Extracts the total results count, domains, and IP addresses from the response."""
+        domains = []
+        ip_addresses_by_waf = {'No WAF': []}
+
+        matches = data.get('items', [])
+        total_results_count = len(matches)
+
+        for match in matches:
+            match_data = match.get('data', {})
+            site = match_data.get('host', '')
+            port = match_data.get('port', '')
+            if site:
+                domains.append(f"{site}:{port}")
+
+            ip = match_data.get('ip')
+            if ip and not ip in ip_addresses_by_waf['No WAF']:
+                ip_addresses_by_waf['No WAF'].append(ip)
+
+        domains = list(set(domains))
+
+        return total_results_count, domains, ip_addresses_by_waf
+
+
 def run_fetchers(favicons, fetchers):
     """Run fetchers in parallel with a spinning progress bar and print results sequentially."""
     results = []
@@ -345,7 +406,8 @@ def run_fetchers(favicons, fetchers):
 
 def make_se_links(domain):
     links_bundle = [
-        ('Google', f'https://www.google.com/s2/favicons?domain={domain}&size=32'),
+        ('Google 16x16', f'https://www.google.com/s2/favicons?domain={domain}&size=16'),
+        ('Google 32x32', f'https://www.google.com/s2/favicons?domain={domain}&size=32'),
         ('DuckDuckGo', f'https://icons.duckduckgo.com/ip3/{domain}.ico'),
         ('Unavatar', f'https://unavatar.io/{domain}'),
     ]
@@ -386,9 +448,10 @@ if __name__ == "__main__":
         ZoomEyePreviewFetcher(use_cache=True),
     ]
 
-    from settings import SHODAN_KEY
+    from settings import SHODAN_KEY, NETLAS_KEY
     if SHODAN_KEY:
         fetchers.append(ShodanPreviewAPIKeyFetcher(SHODAN_KEY))
+    fetchers.append(NetlasPreviewAPIKeyFetcher(NETLAS_KEY))
 
     if args.uri:
         if args.uri.count('/') >= 3 and not args.uri.endswith('/'):
@@ -411,13 +474,14 @@ if __name__ == "__main__":
         # Try to find favicons on domain
         icons = favicon.get(f"http://{args.domain}")
         if icons:
-            print(f'[-] Found {len(icons)} favicons for {args.domain}')
+            print(f'[-] Found {len(icons)} favicons for {args.domain}: {', '.join([icon.url for icon in icons])}')
             unique_favicons = set(favicons)
             for icon in icons:
+                print(icon)
                 if icon.width not in (32, 0):
                     continue
                 try:
-                    new_favicon = Favicon.from_url(icon.url, custom_type=f'found favicon for {args.domain}')
+                    new_favicon = Favicon.from_url(icon.url, custom_type=f'guessed favicons of {args.domain}')
                     if new_favicon not in unique_favicons:
                         favicons.append(new_favicon)
                         unique_favicons.add(new_favicon)
@@ -429,7 +493,8 @@ if __name__ == "__main__":
         for ip in ips:
             try:
                 favicon = Favicon.from_url(f"http://{ip}/favicon.ico", custom_type=f"resolved domain '{args.domain}'")
-                if favicon:
+                unique_favicons = set(favicons)
+                if favicon and not favicon in unique_favicons:
                     favicons.append(favicon)
             except Exception as e:
                 print(f'[-] Error {e} for {ip}')
@@ -479,22 +544,6 @@ if __name__ == "__main__":
     else:
         print("No results found.")
 
-# КОММЕНТЫ
-# Не знаю надо ли добавить поиск при помощи API-ключей? Не избыточно ли это
-# https://api.shodan.io/shodan/host/search?key={SHODAN_API_KEY}&query=http.favicon.hash:{favicon_hash}
-# https://github.com/truda8/Favicon-Search/blob/main/Favicon_Api/Collect.py
-
-
-# Некоторые сервисы просят авторизации (они ниже), я просто думал этот печатать при генерации ссылок, типа так:
-# Shodan (need login):
-# https://www.shodan.io/search?query=http.favicon.hash:948997205
-
-# Вот кто просит авторизацию:
-# shodan: log in to use search filters.
-# vtotal: Unlock the power of advanced search with VT ENTERPRISE 
-# edge: login
-# Criminal : Log in to your Criminal IP account to access
-# hunter: sign with google
 
 # Тут нашел способ поиска фавиконок через поисковики, есть еще другие но не вижу смысла добавлять их, это самые большие
 # Зачем это нужно? Тут может быть другая фавиконка можно потом по ней поискать и найти много другой инфы, может это надо указать при выдаче
