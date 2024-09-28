@@ -1,7 +1,14 @@
+about-time==4.2.1
+alive-progress==3.1.5
+beautifulsoup4==4.12.3
+bs4==0.0.2
 certifi==2024.8.30
 charset-normalizer==3.3.2
+colorama==0.4.6
 dnspython==2.6.1
+grapheme==0.6.0
 idna==3.10
 mmh3==5.0.1
 requests==2.32.3
+soupsieve==2.6
 urllib3==2.2.3

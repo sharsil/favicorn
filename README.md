@@ -41,3 +41,9 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 - [Favicon-Search](https://github.com/truda8/Favicon-Search)
 - [favihunter](https://github.com/eremit4/favihunter)
 - [favfound](https://github.com/elihypoo414/favfound)
+
+## Testing
+
+```sh
+$ python3 -m unittest test_favicorn.py
+```
