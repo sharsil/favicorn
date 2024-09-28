@@ -33,7 +33,9 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 
 - Search for C2 (command and control) servers of hackers
 - Search for phishing domains
+ - [Andrea Fortuna: Favicon Forensics: hunting phishing sites with Shodan](https://andreafortuna.org/2024/09/18/unmasking-digital-deception-leveraging-shodan-and-favicon-hashes-to-detect-phishing-sites)
 - Extend your scope for pentesting
+ - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
 - Research purposes
 
 ## Other relevant tools
@@ -41,6 +43,9 @@ $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 - [Favicon-Search](https://github.com/truda8/Favicon-Search)
 - [favihunter](https://github.com/eremit4/favihunter)
 - [favfound](https://github.com/elihypoo414/favfound)
+- [favicon](https://github.com/scottwernervt/favicon)
+- [pyfav](https://github.com/phillipsm/pyfav)
+- [besticon (favicon-service)](https://github.com/mat/besticon/)
 
 ## Testing
 

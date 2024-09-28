@@ -6,16 +6,17 @@ import requests
 import hashlib
 import json
 import codecs
+import shodan
 from colorama import Fore, Style, init
-from bs4 import BeautifulSoup as bs
 from alive_progress import alive_bar
 import concurrent.futures
+import favicon
 import sys
 import re
 import os
 
 # tinyurl
-from urllib.parse import urlencode
+from urllib.parse import urlencode, uses_netloc
 from contextlib import closing
 from urllib.request import urlopen
 
@@ -131,18 +132,122 @@ class Favicon:
         ])
         return links_bundle + '\n'
 
-class ZoomEyePreviewFetcher:
-    """Stateless fetcher for getting results preview from ZoomEye based on favicon hash."""
+
+class Fetcher:
+    """Base fetcher class"""
+    @classmethod
+    def _load_response_from_file(cls, murmur_hash):
+        filename = f"{murmur_hash}_{cls.get_platform()}.json"
+        output_dir = "api_responses"
+        file_path = os.path.join(output_dir, filename)
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        return None
+
+    @classmethod
+    def _save_response_to_file(cls, data, murmur_hash):
+        """Save the API response data to a JSON file with a formatted filename."""
+        filename = f"{murmur_hash}_{cls.get_platform()}.json"
+        output_dir = "api_responses"
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, filename)
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+
+    @classmethod
+    def get_platform(cls):
+        """Method to return the platform name. This should be overridden in subclasses."""
+        raise NotImplementedError("Subclasses should implement this method to return the platform name.")
+
+
+class ShodanPreviewAPIKeyFetcher(Fetcher):
+    """Stateless fetcher for getting results from Shodan based on favicon hash."""
+    def __init__(self, api_key, use_cache=True):
+        self.api_key = api_key
+        self.use_cache = use_cache
+
+    @classmethod
+    def get_platform(self):
+        return 'shodan'
+
+    def get_info(self, favicon):
+        """Fetch information from Shodan based on the favicon object using its API key."""
+        api = shodan.Shodan(self.api_key)
+        murmur_hash = favicon.murmur_hash
+        try:
+            result = None
+            if self.use_cache:
+                result = ShodanPreviewAPIKeyFetcher._load_response_from_file(favicon.murmur_hash) # cached
+
+            if not result:
+                result = api.search(f'http.favicon.hash:{murmur_hash}')
+                ShodanPreviewAPIKeyFetcher._save_response_to_file(result, favicon.murmur_hash)
+
+            total_results_count, domains, ip_addresses_by_waf = ShodanPreviewAPIKeyFetcher._parse_response(result)
+            return ShodanPreviewAPIKeyFetcher._format_output(total_results_count, domains, ip_addresses_by_waf, murmur_hash)
+        except shodan.APIError as e:
+            return f"Shodan API request failed: {str(e)}"
 
     @staticmethod
-    def get_info(favicon):
+    def _parse_response(data):
+        """Extracts the total results count, domains, and IP addresses from the Shodan response."""
+        total_results_count = data.get('total', 0)
+        domains = []
+        ip_addresses_by_waf = {}
+
+        matches = data.get('matches', [])
+        for match in matches:
+            # Extract domain (if available)
+            hostnames = match.get('hostnames', [])
+            if hostnames:
+                domains.append(f"{hostnames[0]}:{match.get('port')}")
+
+            # Extract IP addresses
+            ip = match.get('ip_str', '')
+            if ip:
+                ips = [ip]  # Wrap in list to unify with other methods
+            else:
+                ips = []
+
+            waf_name = match.get('http', {}).get('waf', 'No CDN/WAF')
+
+            if waf_name not in ip_addresses_by_waf:
+                ip_addresses_by_waf[waf_name] = []
+            ip_addresses_by_waf[waf_name].extend(ips)
+
+        return total_results_count, domains, ip_addresses_by_waf
+
+    @staticmethod
+    def _format_output(total_results_count, domains, ip_addresses_by_waf, murmur_hash):
+        """Format the output to display the total results count, domains, and IP addresses."""
+        label_color = Fore.CYAN
+        result = f"\n{Style.BRIGHT}{Fore.BLUE}Shodan Results Preview\n"
+        result += f"{label_color}Total Results: {Fore.GREEN}{total_results_count}\n"
+        result += f"{label_color}Domains: {Fore.YELLOW}{', '.join(domains)}\n"
+        for waf, ips in ip_addresses_by_waf.items():
+            result += f"{label_color}IP Addresses [{waf}]: {Fore.MAGENTA}{', '.join(ips)}\n"
+        result += f"\n{Fore.RED}Shodan JSON response saved to {murmur_hash}_shodan.json"
+        return result
+
+
+class ZoomEyePreviewFetcher(Fetcher):
+    """Stateless fetcher for getting results preview from ZoomEye based on favicon hash."""
+    def __init__(self, use_cache):
+        self.use_cache = use_cache
+
+    @classmethod
+    def get_platform(self):
+        return 'zoomeye'
+
+    def get_info(self, favicon):
         """Fetch information from ZoomEye based on the favicon object."""
         base_url = 'https://www.zoomeye.hk/api/search'
         headers = {
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,pt;q=0.6',
             'Connection': 'keep-alive',
-            'Cookie': '__jsluid_s=7b7c2017087e12824248295feed7dfdb',
+            'Cookie': '__jsluid_s=b7c2017087e12824248295feed7dfdb1',
             'Cube-Authorization': 'undefined',
             'Sec-Fetch-Dest': 'empty',
             'Sec-Fetch-Mode': 'cors',
@@ -157,25 +262,25 @@ class ZoomEyePreviewFetcher:
         referer = f'https://www.zoomeye.hk/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
         headers['Referer'] = referer
         
-        response = requests.get(url, headers=headers)
+        response = None
+        data = {}
 
-        if response.status_code == 200:
+        if self.use_cache:
+            data = ZoomEyePreviewFetcher._load_response_from_file(favicon.murmur_hash) # cached
+            response = data
+
+        if not response:
+            response = requests.get(url, headers=headers)
             data = response.json()
+            if response.status_code != 200:
+                return f"ZoomEye Web API request failed: {response.status_code}"
             ZoomEyePreviewFetcher._save_response_to_file(data, favicon.murmur_hash)
-            total_results_count, domains, ip_addresses_by_waf = ZoomEyePreviewFetcher._parse_response(data)
-            return ZoomEyePreviewFetcher._format_output(total_results_count, domains, ip_addresses_by_waf, favicon.murmur_hash, favicon.name())
-        else:
-            return f"Request failed with status code {response.status_code}"
 
-    @staticmethod
-    def _save_response_to_file(data, murmur_hash):
-        """Save the API response data to a JSON file with a formatted filename."""
-        filename = f"{murmur_hash}_zoomeye.json"
-        output_dir = "api_responses"
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, filename)
-        with open(file_path, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
+        if data.get('status') == 429:
+            return f"ZoomEye Web API request failed: Ratelimit"
+
+        total_results_count, domains, ip_addresses_by_waf = ZoomEyePreviewFetcher._parse_response(data)
+        return ZoomEyePreviewFetcher._format_output(total_results_count, domains, ip_addresses_by_waf, favicon.murmur_hash, favicon.name())
 
     @staticmethod
     def _parse_response(data):
@@ -210,12 +315,15 @@ class ZoomEyePreviewFetcher:
     @staticmethod
     def _format_output(total_results_count, domains, ip_addresses_by_waf, murmur_hash, name):
         """Format the output to display the total results count, domains, and IP addresses."""
+        if not total_results_count:
+            return f"\n{Style.BRIGHT}{Fore.BLUE}No results found in ZoomEye for {name}"
+
         label_color = Fore.CYAN
         result = f"\n{Style.BRIGHT}{Fore.BLUE}ZoomEye Results Preview for {name}\n"
         result += f"{label_color}Total Results: {Fore.GREEN}{total_results_count}\n"
         result += f"{label_color}Domains: {Fore.YELLOW}{', '.join(domains)}\n"
         for waf, ips in ip_addresses_by_waf.items():
-            result += f"{label_color}IP Addresses ({waf}): {Fore.MAGENTA}{', '.join(ips)}\n"
+            result += f"{label_color}IP Addresses [{waf}]: {Fore.MAGENTA}{', '.join(ips)}\n"
         result += f"\n{Fore.RED}ZoomEye JSON response saved to {murmur_hash}_zoomeye.json"
         return result
 
@@ -229,7 +337,7 @@ def run_fetchers(favicons, fetchers):
 
     with alive_bar(len(tasks), title="Fetching some results...") as bar:
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(fetcher().get_info, favicon) for fetcher, favicon in tasks]
+            futures = [executor.submit(fetcher.get_info, favicon) for fetcher, favicon in tasks]
 
             for future in concurrent.futures.as_completed(futures):
                 try:
@@ -276,12 +384,16 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--uri", help="Get favicon hash from WEB")
     parser.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
     parser.add_argument("--tinyurl", action="store_true", help="Get short links for results with TinyURL")
+    parser.add_argument("--no-fetch", action="store_true", default=False, help="Don't fetch results from engines")
     args = parser.parse_args()
 
     selist = []
     favicons = []
 
-    fetchers = [ZoomEyePreviewFetcher]
+    fetchers = [
+        ZoomEyePreviewFetcher(use_cache=True),
+        # ShodanPreviewAPIKeyFetcher(''),
+    ]
 
     if args.uri:
         if args.uri.count('/') >= 3 and not args.uri.endswith('/'):
@@ -301,6 +413,23 @@ if __name__ == "__main__":
             print(f"[-] Failed to load favicon from file: {e}")
 
     elif args.domain:
+        # Try to find favicons on domain
+        icons = favicon.get(f"http://{args.domain}")
+        if icons:
+            print(f'[-] Found {len(icons)} favicons for {args.domain}')
+            unique_favicons = set(favicons)
+            for icon in icons:
+                if icon.width not in (32, 0):
+                    continue
+                try:
+                    new_favicon = Favicon.from_url(icon.url, custom_type=f'found favicon for {args.domain}')
+                    if new_favicon not in unique_favicons:
+                        favicons.append(new_favicon)
+                        unique_favicons.add(new_favicon)
+                except Exception as e:
+                    print(f"Error processing found favicon from URL {icon.url} for {args.domain}: {e}")
+
+        # Try to get favicons from all related IPs
         ips = resolve_domain(args.domain)
         for ip in ips:
             try:
@@ -327,10 +456,13 @@ if __name__ == "__main__":
             favicon.tinyurl = args.tinyurl
             print(f"\nResults for favicon from {favicon.type}: {favicon.source}\n")
             print(favicon.make_links())
-            
-        run_fetchers(favicons, fetchers)
+
+        if args.no_fetch:
+            print("Fetching of results is disabled, exiting.")
+        else:
+            run_fetchers(favicons, fetchers)
     else:
-        print("Nothing is found...")
+        print("No results found.")
 
 # КОММЕНТЫ
 # Не знаю надо ли добавить поиск при помощи API-ключей? Не избыточно ли это
