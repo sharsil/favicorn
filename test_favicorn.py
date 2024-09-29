@@ -34,8 +34,8 @@ class TestFavicon(unittest.TestCase):
         self.assertEqual(favicon.hex_hash, self.expected_hex_hash, "Hex hash does not match expected value.")
         self.assertEqual(favicon.base64_hash, self.expected_base64, "Base64 hash does not match expected value.")
         
-        # Validate the make_links output (partially, for brevity)
-        links_output = favicon.make_links()
+        # Validate the links_text output (partially, for brevity)
+        links_output = favicon.links_text()
         self.assertIn('ZoomEye', links_output)
         self.assertIn('Shodan', links_output)
 
@@ -54,16 +54,16 @@ class TestFavicon(unittest.TestCase):
         self.assertEqual(favicon.sha256_hash, self.expected_sha256)
         self.assertEqual(favicon.hex_hash, self.expected_hex_hash)
         
-        # Validate the make_links output
-        links_output = favicon.make_links()
+        # Validate the links_text output
+        links_output = favicon.links_text()
         self.assertIn('ZoomEye', links_output)
         self.assertIn('Fofa', links_output)
 
-    def test_make_links_output(self):
-        """Test if make_links generates proper links"""
+    def test_links_text_output(self):
+        """Test if links_text generates proper links"""
         favicon = Favicon(self.sample_favicon_content, source="http://example.com", type="direct link")
         
-        links_output = favicon.make_links()
+        links_output = favicon.links_text()
         platforms = favicon.get_platform_names()
 
         for platform in platforms:

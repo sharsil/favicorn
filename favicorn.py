@@ -130,6 +130,27 @@ class Favicon:
             f'{Fore.CYAN}{Style.BRIGHT}Hex(MurMurHash):    {Style.NORMAL}{self.hex_hash}',
         ])
 
+    def links_categorized_text(self):
+        links_dict = self.generate_links_dict()
+
+        text = f'''{Style.BRIGHT}{Fore.GREEN}Trial/free results, no login:{Style.NORMAL}
+{Fore.CYAN}Netlas:       {Fore.GREEN}{links_dict.get("Netlas")}
+{Fore.CYAN}Censys:       {Fore.GREEN}{links_dict.get("Censys")}
+{Fore.CYAN}ZoomEye:      {Fore.GREEN}{links_dict.get("ZoomEye")}
+{Fore.CYAN}Fofa:         {Fore.GREEN}{links_dict.get("Fofa")}
+{Fore.CYAN}BinaryEdge:   {Fore.GREEN}{links_dict.get("BinaryEdge")}
+{Fore.CYAN}ODIN:         {Fore.GREEN}{links_dict.get("ODIN")}
+{Fore.CYAN}HunterHow:    {Fore.GREEN}{links_dict.get("HunterHow")}
+
+{Style.BRIGHT}{Fore.YELLOW}Login required:{Style.NORMAL}
+{Fore.CYAN}Shodan:       {Fore.GREEN}{links_dict.get("Shodan")}
+{Fore.CYAN}CriminalIP:   {Fore.GREEN}{links_dict.get("CriminalIP")}
+
+{Style.BRIGHT}{Fore.RED}Subscription needed:{Style.NORMAL}
+{Fore.CYAN}VirusTotal:   {Fore.GREEN}{links_dict.get("VirusTotal")}
+        '''
+        return text
+
     def links_text(self):
         """Generate the same text output as the original function with aligned columns"""
         links_dict = self.generate_links_dict()
@@ -533,7 +554,7 @@ if __name__ == "__main__":
             print(f"\nResults for favicon from {favicon.type}: {favicon.source}\n")
             if args.verbose:
                 print(favicon.hashes_text()+'\n')
-            print(favicon.links_text())
+            print(favicon.links_categorized_text())
 
         if args.no_fetch:
             print("Fetching of results is disabled, exiting.")
