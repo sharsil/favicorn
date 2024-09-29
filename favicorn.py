@@ -6,12 +6,14 @@ import requests
 import hashlib
 import json
 import codecs
+
 from colorama import Fore, Style, init
 from alive_progress import alive_bar
 import concurrent.futures
 import favicon
 import sys
 import re
+import io
 import os
 
 # fetchers
@@ -55,6 +57,7 @@ class Favicon:
         self.sha256_hash = hashlib.sha256(content).hexdigest()
         self.base64_hash = codecs.encode('icon_hash="{}"'.format(self.murmur_hash).encode('utf-8'), 'base64').decode('utf-8').strip()
         self.hex_hash = hex(self.murmur_hash).replace('0x', '', 1)
+        self.average_hash = Favicon.get_perceptual_hash(source, content)
 
     def __eq__(self, other):
         if isinstance(other, Favicon):
@@ -66,6 +69,23 @@ class Favicon:
 
     def name(self):
         return f'favicon from {self.type}: {self.source}'
+
+    @classmethod
+    def get_perceptual_hash(cls, source, content):
+        request_url = "https://app.netlas.io/api/get_hash_by_link/?link="
+        request_data = "https://app.netlas.io/api/get_perceptual_hash/"
+        try:
+            if source.startswith('http'):
+                response = requests.get(request_url+source)
+                return response.json().get("average_hash")
+            else:
+                files = {'file': ('favicon.png', io.BytesIO(content), 'image/png')}
+                response = requests.post(request_data, files=files)
+                return response.json().get("average_hash")
+        except Exception as e:
+            print(f'[-] Error getting perceptual average hash from Netlas: {e}')
+
+        return ""
 
     @classmethod
     def from_url(cls, url, custom_type="direct link"):
@@ -104,6 +124,7 @@ class Favicon:
             'VirusTotal': f'https://www.virustotal.com/gui/search/entity:url%20main_icon_md5:{self.md5_hash}',
             'BinaryEdge': f'https://app.binaryedge.io/services/query?query=web.favicon.md5:{self.md5_hash}&page=1',
             'Netlas': f'https://app.netlas.io/responses/?q=http.favicon.hash_sha256:{self.sha256_hash}&page=1',
+            'Netlas Perceptual': f'https://app.netlas.io/responses/?q=http.favicon.perceptual_hash:{self.average_hash}~2&page=1',
             'Censys': f'https://search.censys.io/search?resource=hosts&sort=RELEVANCE&per_page=25&virtual_hosts=EXCLUDE&q=services.http.response.favicons.md5_hash:{self.md5_hash}',
             'ODIN': f'https://search.odin.io/hosts?query=services.modules.http.favicon.murmur_hash%3A%22{self.murmur_hash}%22',
             'CriminalIP': f'https://www.criminalip.io/asset/search?query=favicon:+{self.hex_hash}',
@@ -128,6 +149,7 @@ class Favicon:
             f'{Fore.CYAN}{Style.BRIGHT}SHA256(Favicon):    {Style.NORMAL}{self.sha256_hash}',
             f'{Fore.CYAN}{Style.BRIGHT}Base64(MurMurHash): {Style.NORMAL}{self.base64_hash}',
             f'{Fore.CYAN}{Style.BRIGHT}Hex(MurMurHash):    {Style.NORMAL}{self.hex_hash}',
+            f'{Fore.CYAN}{Style.BRIGHT}NetlasAverageHash:  {Style.NORMAL}{self.average_hash}',
         ])
 
     def links_categorized_text(self):
@@ -135,6 +157,7 @@ class Favicon:
 
         text = f'''{Style.BRIGHT}{Fore.GREEN}Trial/free results, no login:{Style.NORMAL}
 {Fore.CYAN}Netlas:       {Fore.GREEN}{links_dict.get("Netlas")}
+{Fore.CYAN}Netlas fuzzy: {Fore.GREEN}{links_dict.get("Netlas Perceptual")}
 {Fore.CYAN}Censys:       {Fore.GREEN}{links_dict.get("Censys")}
 {Fore.CYAN}ZoomEye:      {Fore.GREEN}{links_dict.get("ZoomEye")}
 {Fore.CYAN}Fofa:         {Fore.GREEN}{links_dict.get("Fofa")}
@@ -149,6 +172,7 @@ class Favicon:
 {Style.BRIGHT}{Fore.RED}Subscription needed:{Style.NORMAL}
 {Fore.CYAN}VirusTotal:   {Fore.GREEN}{links_dict.get("VirusTotal")}
         '''
+
         return text
 
     def links_text(self):
