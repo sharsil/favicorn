@@ -1,31 +1,29 @@
 #!/usr/bin/python3
 
-import mimetypes
 import argparse
-import requests
-import hashlib
-import json
 import codecs
-
-from colorama import Fore, Style, init
-from alive_progress import alive_bar
 import concurrent.futures
-import favicon
-import sys
-import re
+import hashlib
 import io
+import json
+import mimetypes
 import os
-import time
 import random
+import re
+import sys
+import time
+from contextlib import closing
+# tinyurl
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
+import favicon
+import netlas
+import requests
 # fetchers
 import shodan
-import netlas
-
-# tinyurl
-from urllib.parse import urlencode, uses_netloc
-from contextlib import closing
-from urllib.request import urlopen
+from alive_progress import alive_bar
+from colorama import Fore, Style, init
 
 requests.packages.urllib3.disable_warnings()
 init(autoreset=True)
@@ -44,68 +42,40 @@ def make_url_tiny(url):
     with closing(urlopen(request_url)) as response:
         return response.read().decode("utf-8")
 
-
 def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def animated_random_reveal_ascii_art(ascii_art, delay=0.1, reveal_count=1):
-    lines = ascii_art.splitlines()
-    revealed_lines = [['O' for _ in line] for line in lines]
-
-    total_characters = sum(len(line) for line in lines)
-    characters_revealed = 0
-
-    while characters_revealed < total_characters:
-        line_indices = [i for i in range(len(lines)) if 'O' in revealed_lines[i]]
-
-        if not line_indices:
-            break
-
-        line_index = random.choice(line_indices)
-
-        possible_indices = [i for i, char in enumerate(revealed_lines[line_index]) if char == 'O']
-        num_to_reveal = min(reveal_count, len(possible_indices))
-
-        indices_to_reveal = random.sample(possible_indices, num_to_reveal)
-
-        for index in indices_to_reveal:
-            revealed_lines[line_index][index] = lines[line_index][index]
-            characters_revealed += 1
-
-        clear_terminal()
-
-        for revealed_line in revealed_lines:
-            print(''.join(revealed_line).replace('0', '\033[0m_'))
-
-        time.sleep(delay)
-
+def print_ascii_art():
     clear_terminal()
-    for line in lines:
-        colored_line = ''.join(
-            ['\033[33m+\033[0m' if char == '+' else '\033[1;35m' + char + '\033[0m' for char in line]
-        )
-        print(colored_line)
-
-
-ascii_art = r"""
-             +           +              
-                              +         
-         +     /                   +    
-              /       +                 
-             +                  +       
-      +                ,               +
-                      /|                
-            \        / ->         \     
-    +        \,_    /  ->     +    \    
-             /0(``  \  ->           \   
-            (, /"(``-\_/_--_         +  
-                  \ )___(  )\\.         
-                  |/     \/  \\\        
-                  \\     /\             
-                  o o   o  o            
-
-"""
-
+    ascii_art = [['\033[33m+\033[0m' if char == '+' else '\033[1;35m' + char + '\033[0m' for char in line.ljust(45)]
+                 for line in r"""             +           +              
+                                  +         
+             +     /                   +    
+                  /       +                 
+                 +                  +       
+          +                ,               +
+                          /|                
+                \        / ->         \     
+        +        \,_    /  ->     +    \    
+                 /0(``  \  ->           \   
+                (, /"(``-\_/_--_         +  
+                      \ )___(  )\\.         
+                      |/     \/  \\\        
+                      \\     /\             
+                      o o   o  o            
+                                            """.split("\n")]
+    dim_x, dim_y = len(ascii_art[0]), len(ascii_art)
+    mask = [['O' for _ in range(dim_x)] for _ in range(dim_y)]
+    available_positions = [(y, x) for y in range(dim_y) for x in range(dim_x)]
+    while available_positions:
+        for _ in ascii_art:
+            print("\033[F", end='')
+        y, x = random.choice(available_positions)
+        available_positions.remove((y, x))
+        mask[y][x] = 0
+        for dy, line in enumerate(ascii_art):
+            print(''.join(mask[dy][dx] or line[dx] for dx in range(dim_x)), flush=os.name != 'nt')
+        time.sleep(0.001)
 
 class Favicon:
     def __init__(self, content, source=None, type=None, tinyurl=False):
@@ -564,7 +534,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Verbose (show hashes)")
     args = parser.parse_args()
 
-    animated_random_reveal_ascii_art(ascii_art, delay=0.00001)
+    print_ascii_art()
 
     selist = []
     favicons = []
@@ -599,7 +569,8 @@ if __name__ == "__main__":
         # Try to find favicons on domain
         icons = favicon.get(f"http://{args.domain}")
         if icons:
-            print(f'[-] Found {len(icons)} favicons for {args.domain}: {', '.join([icon.url for icon in icons])}')
+            icon_urls = ', '.join([icon.url for icon in icons])
+            print(f'[-] Found {len(icons)} favicons for {args.domain}: {icon_urls}')
             unique_favicons = set(favicons)
             for icon in icons:
                 print(icon)
