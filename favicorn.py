@@ -15,6 +15,8 @@ import sys
 import re
 import io
 import os
+import time
+import random
 
 # fetchers
 import shodan
@@ -41,6 +43,69 @@ def make_url_tiny(url):
     request_url = f"http://tinyurl.com/api-create.php?{urlencode({'url':url})}"
     with closing(urlopen(request_url)) as response:
         return response.read().decode("utf-8")
+
+
+def clear_terminal():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def animated_random_reveal_ascii_art(ascii_art, delay=0.1, reveal_count=1):
+    lines = ascii_art.splitlines()
+    revealed_lines = [['O' for _ in line] for line in lines]
+
+    total_characters = sum(len(line) for line in lines)
+    characters_revealed = 0
+
+    while characters_revealed < total_characters:
+        line_indices = [i for i in range(len(lines)) if 'O' in revealed_lines[i]]
+
+        if not line_indices:
+            break
+
+        line_index = random.choice(line_indices)
+
+        possible_indices = [i for i, char in enumerate(revealed_lines[line_index]) if char == 'O']
+        num_to_reveal = min(reveal_count, len(possible_indices))
+
+        indices_to_reveal = random.sample(possible_indices, num_to_reveal)
+
+        for index in indices_to_reveal:
+            revealed_lines[line_index][index] = lines[line_index][index]
+            characters_revealed += 1
+
+        clear_terminal()
+
+        for revealed_line in revealed_lines:
+            print(''.join(revealed_line).replace('0', '\033[0m_'))
+
+        time.sleep(delay)
+
+    clear_terminal()
+    for line in lines:
+        colored_line = ''.join(
+            ['\033[33m+\033[0m' if char == '+' else '\033[1;35m' + char + '\033[0m' for char in line]
+        )
+        print(colored_line)
+
+
+ascii_art = r"""
+             +           +              
+                              +         
+         +     /                   +    
+              /       +                 
+             +                  +       
+      +                ,               +
+                      /|                
+            \        / ->         \     
+    +        \,_    /  ->     +    \    
+             /0(``  \  ->           \   
+            (, /"(``-\_/_--_         +  
+                  \ )___(  )\\.         
+                  |/     \/  \\\        
+                  \\     /\             
+                  o o   o  o            
+
+"""
+
 
 class Favicon:
     def __init__(self, content, source=None, type=None, tinyurl=False):
@@ -498,6 +563,8 @@ if __name__ == "__main__":
     parser.add_argument("--no-fetch", action="store_true", default=False, help="Don't fetch results from engines")
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Verbose (show hashes)")
     args = parser.parse_args()
+
+    animated_random_reveal_ascii_art(ascii_art, delay=0.00001)
 
     selist = []
     favicons = []
