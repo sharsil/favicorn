@@ -574,7 +574,7 @@ if __name__ == "__main__":
             print(f'[-] Found {len(icons)} favicons for {args.domain}: {icon_urls}')
             unique_favicons = set(favicons)
             for icon in icons:
-                print(icon)
+                # print(icon)
                 if icon.width not in (32, 0):
                     continue
                 try:

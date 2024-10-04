@@ -8,6 +8,8 @@ Favicorn takes favicon (url, filename) as an input, and gives you links to searc
 
 Put ⭐ to the repo, so we'll implement automatic scraping of all sources!
 
+![](screenshot.png)
+
 ## Usage
 
 Search by a specific favicon URL (`--uri`, `-u`):
@@ -20,7 +22,7 @@ Search by a favicon file (`--file`, `-f`):
 $ favicorn.py -f test-favicon.png
 ```
 
-Search by a domain (`--domain`, `-d`):
+Search by a domain, resolving to IPs and checking their favicons (`--domain`, `-d`):
 ```sh
 $ favicorn.py -d google.com
 ```
@@ -45,7 +47,7 @@ Show only links to platforms, don't extract preview of results (`--no-fetch`):
 $ favicorn.py -d google.com --no-fetch
 ```
 
-## Preview results
+## Preview of results
 
 By default, Favicorn generates links to search for websites by their favicon across all known platforms,
 and then retrieves the first pages of results from some of them.
