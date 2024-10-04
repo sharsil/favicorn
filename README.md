@@ -10,8 +10,52 @@ Put ⭐ to the repo, so we'll implement automatic scraping of all sources!
 
 ## Usage
 
+Search by a specific favicon URL (`--uri`, `-u`):
 ```sh
 $ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
+```
+
+Search by a favicon file (`--file`, `-f`):
+```sh
+$ favicorn.py -f test-favicon.png
+```
+
+Search by a domain (`--domain`, `-d`):
+```sh
+$ favicorn.py -d google.com
+```
+
+Show favicon hashes for a search (`--verbose`):
+```sh
+$ favicorn.py -d google.com -v
+```
+
+Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`):
+```sh
+$ favicorn.py -d google.com -e
+```
+
+Give tinyurl links instead of full links for platforms (`--tinyurl`):
+```sh
+$ favicorn.py -d google.com --tinyurl
+```
+
+Show only links to platforms, don't extract preview of results (`--no-fetch`):
+```sh
+$ favicorn.py -d google.com --no-fetch
+```
+
+## Preview results
+
+By default, Favicorn generates links to search for websites by their favicon across all known platforms,
+and then retrieves the first pages of results from some of them.
+
+Currently, ZoomEye, Shodan (key required), and Netlas (key required) are supported.
+
+Export API keys in the following way:
+```
+export SHODAN_KEY=...
+export NETLAS_KEY=...
 ```
 
 ## Supported platforms

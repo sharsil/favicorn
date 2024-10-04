@@ -543,7 +543,8 @@ if __name__ == "__main__":
         ZoomEyePreviewFetcher(use_cache=True),
     ]
 
-    from settings import SHODAN_KEY, NETLAS_KEY
+    SHODAN_KEY = os.getenv('SHODAN_KEY')
+    NETLAS_KEY = os.getenv('NETLAS_KEY')
     if SHODAN_KEY:
         fetchers.append(ShodanPreviewAPIKeyFetcher(SHODAN_KEY))
     fetchers.append(NetlasPreviewAPIKeyFetcher(NETLAS_KEY))
