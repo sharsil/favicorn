@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import argparse
 import codecs
@@ -28,6 +28,8 @@ from colorama import Fore, Style, init
 requests.packages.urllib3.disable_warnings()
 init(autoreset=True)
 
+
+OUTPUT_DIR = "api_responses"
 
 try:
     import dns.resolver, mmh3
@@ -187,6 +189,11 @@ class Favicon:
             f'{Fore.CYAN}{Style.BRIGHT}NetlasAverageHash:  {Style.NORMAL}{self.average_hash}',
         ])
 
+    def links_only_text(self):
+        links_dict = self.generate_links_dict()
+        links_bundle = '\n'.join([link for _, link in links_dict.items()])
+        return links_bundle + '\n'
+
     def links_categorized_text(self):
         links_dict = self.generate_links_dict()
 
@@ -196,12 +203,12 @@ class Favicon:
 {Fore.CYAN}Censys:       {Fore.GREEN}{links_dict.get("Censys")}
 {Fore.CYAN}ZoomEye:      {Fore.GREEN}{links_dict.get("ZoomEye")}
 {Fore.CYAN}Fofa:         {Fore.GREEN}{links_dict.get("Fofa")}
-{Fore.CYAN}BinaryEdge:   {Fore.GREEN}{links_dict.get("BinaryEdge")}
 {Fore.CYAN}ODIN:         {Fore.GREEN}{links_dict.get("ODIN")}
-{Fore.CYAN}HunterHow:    {Fore.GREEN}{links_dict.get("HunterHow")}
 
 {Style.BRIGHT}{Fore.YELLOW}Login required:{Style.NORMAL}
 {Fore.CYAN}Shodan:       {Fore.GREEN}{links_dict.get("Shodan")}
+{Fore.CYAN}BinaryEdge:   {Fore.GREEN}{links_dict.get("BinaryEdge")}
+{Fore.CYAN}HunterHow:    {Fore.GREEN}{links_dict.get("HunterHow")}
 {Fore.CYAN}CriminalIP:   {Fore.GREEN}{links_dict.get("CriminalIP")}
 
 {Style.BRIGHT}{Fore.RED}Subscription needed:{Style.NORMAL}
@@ -231,8 +238,8 @@ class Fetcher:
     @classmethod
     def _load_response_from_file(cls, murmur_hash):
         filename = f"{murmur_hash}_{cls.get_platform()}.json"
-        output_dir = "api_responses"
-        file_path = os.path.join(output_dir, filename)
+
+        file_path = os.path.join(OUTPUT_DIR, filename)
         if os.path.exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as file:
                 return json.load(file)
@@ -242,9 +249,8 @@ class Fetcher:
     def _save_response_to_file(cls, data, murmur_hash):
         """Save the API response data to a JSON file with a formatted filename."""
         filename = f"{murmur_hash}_{cls.get_platform()}.json"
-        output_dir = "api_responses"
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, filename)
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        file_path = os.path.join(OUTPUT_DIR, filename)
         with open(file_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
 
@@ -267,7 +273,9 @@ class Fetcher:
         result += f"{make_header('Domains:')} {Fore.YELLOW}{', '.join(domains)}\n"
         for waf, ips in ip_addresses_by_waf.items():
             result += f"{make_header(f'IP Addresses [{waf}]:')} {Fore.MAGENTA}{', '.join(ips)}\n"
-        result += f"\n{Fore.GREEN}{cls.get_platform()} JSON response saved to {murmur_hash}_{cls.get_platform()}.json"
+
+        path = os.path.join(OUTPUT_DIR, f"{murmur_hash}_{cls.get_platform()}.json")
+        result += f"\n{Fore.GREEN}{cls.get_platform()} JSON response saved to {path}"
         return result
 
 
@@ -525,16 +533,26 @@ if __name__ == "__main__":
         description="Get favicon hashes from multiple sources"
     )
 
-    parser.add_argument("-f", "--file", help="Get favicon hash from a specific file")
-    parser.add_argument("-e", "--add-from-search-engines", action="store_true", help="Get additional favicon versions using search engines")
-    parser.add_argument("-u", "--uri", help="Get favicon hash from WEB")
-    parser.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
-    parser.add_argument("--tinyurl", action="store_true", help="Get short links for results with TinyURL")
-    parser.add_argument("--no-fetch", action="store_true", default=False, help="Don't fetch results from engines")
-    parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Verbose (show hashes)")
+    search_modes = parser.add_mutually_exclusive_group(required=True)
+    search_modes.add_argument("-u", "--uri", help="Get favicon hash from WEB")
+    search_modes.add_argument("-f", "--file", help="Get favicon hash from a specific file")
+    search_modes.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
+
+    parser.add_argument("-e", "--add-from-search-engines", action="store_true",
+                        help="Get additional favicon versions using search engines")
+    parser.add_argument("--tinyurl", action="store_true",
+                        help="Get short links for results with TinyURL")
+    parser.add_argument("--no-fetch", action="store_true", default=False,
+                        help="Don't fetch results from engines")
+    parser.add_argument("-v", "--verbose", action="store_true", default=False,
+                        help="Verbose (show hashes)")
+    parser.add_argument("--no-logo", action="store_true", default=False,
+                        help="Disable unicorn animation (dangerous option, use with caution!)")
+    parser.add_argument("-s", "--save-links-filename", type=str, help="Save links to a text file")
     args = parser.parse_args()
 
-    print_ascii_art()
+    if not args.no_logo:
+        print_ascii_art()
 
     selist = []
     favicons = []
@@ -551,6 +569,7 @@ if __name__ == "__main__":
 
     if args.uri:
         if args.uri.count('/') >= 3 and not args.uri.endswith('/'):
+            print(f"Searching by favicon from direct link {args.uri}...")
             try:
                 favicon = Favicon.from_url(args.uri)
                 favicons.append(favicon)
@@ -560,6 +579,7 @@ if __name__ == "__main__":
             print(f"[-] Is it correct or full URI: '{args.uri}'?")
 
     elif args.file:
+        print(f"Searching by favicon from file {os.path.abspath(args.file)}...")
         try:
             favicon = Favicon.from_file(args.file)
             favicons.append(favicon)
@@ -568,7 +588,12 @@ if __name__ == "__main__":
 
     elif args.domain:
         # Try to find favicons on domain
-        icons = favicon.get(f"http://{args.domain}")
+        print(f"Searching by possible favicons from domain {args.domain}...")
+        icons = []
+        try:
+            icons = favicon.get(f"http://{args.domain}")
+        except Exception as e:
+            print(f'[!] Unable to guess favicons for {args.domain}: {e}')
         if icons:
             icon_urls = ', '.join([icon.url for icon in icons])
             print(f'[-] Found {len(icons)} favicons for {args.domain}: {icon_urls}')
@@ -610,14 +635,20 @@ if __name__ == "__main__":
 
     preview_results = []
     preview_file = '_preview_results.txt'
+    were_links_saved = False
+    no_results = False
 
     if favicons:
         for favicon in favicons:
             favicon.tinyurl = args.tinyurl
-            print(f"\nResults for favicon from {favicon.type}: {favicon.source}\n")
+            print(f"Results for favicon from {favicon.type}: {favicon.source}\n")
             if args.verbose:
                 print(favicon.hashes_text()+'\n')
             print(favicon.links_categorized_text())
+            if args.save_links_filename:
+                with open(args.save_links_filename, "a") as f:
+                    were_links_saved = True
+                    f.write(favicon.links_only_text())
 
         if args.no_fetch:
             print("Fetching of results is disabled, exiting.")
@@ -636,10 +667,26 @@ if __name__ == "__main__":
                 print(output)
 
             preview_results = sorted(list(all_domains)) + sorted(list(all_ips))
-            filename = f'{favicon.murmur_hash}{preview_file}'.replace('-', '_')
-            with open(filename, 'w') as file:
-                file.write('\n'.join(preview_results))
-                print(f'{Fore.GREEN}Preview results for favicon with MurmurHash {favicon.murmur_hash} was saved to {filename}')
+            if preview_results:
+                filename = f'{favicon.murmur_hash}{preview_file}'.replace('-', '_')
+                path = os.path.join(OUTPUT_DIR, filename)
+                with open(filename, 'w') as file:
+                    file.write('\n'.join(preview_results))
+                    print(f'{Fore.GREEN}Preview results for favicon with MurmurHash {favicon.murmur_hash} saved to {path}')
+            else:
+                no_results = True
     else:
-        print("No results found.")
+        print("No results.")
+        no_results = True
+
+    if no_results:
+        if args.file:
+            print(f'{Fore.YELLOW}Try to specify as an input a domain with -d or an url of favicon with -u!')
+        elif args.uri:
+            print(f'{Fore.YELLOW}Try to specify as an input a domain with -d or a PNG/ICO file of favicon with -f!')
+        elif args.domain:
+            print(f'{Fore.YELLOW}Try to specify as an input an url of favicon with -u or a PNG/ICO file of favicon with -f!')
+
+    if were_links_saved:
+        print(f'{Fore.GREEN}All links saved to {os.path.abspath(args.save_links_filename)}')
 

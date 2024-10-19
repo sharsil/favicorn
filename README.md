@@ -12,45 +12,41 @@ Put ⭐ to the repo, so we'll implement automatic scraping of all sources!
 
 ## Usage
 
+There are 3 search modes: by direct favicon URL, by file,
+and by domain (guessing possible favicons).
+
 Search by a specific favicon URL (`--uri`, `-u`):
 ```sh
-$ favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
+./favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
 ```
 
 Search by a favicon file (`--file`, `-f`):
 ```sh
-$ favicorn.py -f test-favicon.png
+./favicorn.py -f test-favicon.png
 ```
 
 Search by a domain, resolving to IPs and checking their favicons (`--domain`, `-d`):
 ```sh
-$ favicorn.py -d google.com
+./favicorn.py -d google.com
 ```
 
-Show favicon hashes for a search (`--verbose`):
-```sh
-$ favicorn.py -d google.com -v
-```
+### Additional options
+
+Show favicon hashes for a search (`--verbose`): `./favicorn.py -d google.com -v`
 
 Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`):
-```sh
-$ favicorn.py -d google.com -e
-```
+`./favicorn.py -d google.com -e`
 
-Give tinyurl links instead of full links for platforms (`--tinyurl`):
-```sh
-$ favicorn.py -d google.com --tinyurl
-```
+Save all links to the specific file (`-s`, `--save-links-filename`): `./favicorn.py -d google.com -s links.txt`
 
-Show only links to platforms, don't extract preview of results (`--no-fetch`):
-```sh
-$ favicorn.py -d google.com --no-fetch
-```
+Give tinyurl links instead of full links for platforms: `--tinyurl`
+Show only links to platforms, don't extract preview of results: `--no-fetch`
+Disable unicorn animation (dangerous option, use with caution!): `--no-logo`
 
 ## Preview of results
 
-By default, Favicorn generates links to search for websites by their favicon across all known platforms,
-and then retrieves the first pages of results from some of them.
+By default, Favicorn generates links to search for websites by their favicon
+across all known platforms, and then retrieves the first pages of results from some of them.
 
 Currently, ZoomEye, Shodan (key required), and Netlas (key required) are supported.
 
@@ -77,11 +73,11 @@ export NETLAS_KEY=...
 
 ## Use cases
 
-- Search for C2 (command and control) servers of hackers
-- Search for phishing domains
+- Search for phishing domains & brand protection
  - [Andrea Fortuna: Favicon Forensics: hunting phishing sites with Shodan](https://andreafortuna.org/2024/09/18/unmasking-digital-deception-leveraging-shodan-and-favicon-hashes-to-detect-phishing-sites)
 - Extend your scope for pentesting
  - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
+- Search for C2 (command and control) servers of hackers
 - Research purposes
 
 ## Other relevant tools
@@ -99,5 +95,5 @@ export NETLAS_KEY=...
 ## Testing
 
 ```sh
-$ python3 -m unittest test_favicorn.py
+python3 -m unittest test_favicorn.py
 ```
