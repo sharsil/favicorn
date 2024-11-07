@@ -1,12 +1,12 @@
 # FAVICORN 💖🦄
 
-All-sources tool to search websites by favicons.
+**All-sources tool to search websites by favicons.**
 
 ## The mechanism
 
-Favicorn takes favicon (url, filename) as an input, and gives you links to search results in 10 platforms. 
+Favicorn takes a favicon and provides search result links across 10 platforms.
 
-Put ⭐ to the repo, so we'll implement automatic scraping of all sources!
+Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
 ![](screenshot.png)
 
@@ -58,25 +58,25 @@ export NETLAS_KEY=...
 
 ## Supported platforms
 
-| Name        | Login required | Approx quality |
-|-------------|----------------|----------------|
-| ZoomEye     |      yes       |      good      |
-| Shodan      |      yes       |                |
-| Fofa        |       no       |      low       |
-| VirusTotal  |      yes       |                |
-| BinaryEdge  |      yes       |                |
-| Netlas      |       no       |                |
-| Censys      |       no       |                |
-| ODIN        |       no       |                |
-| CriminalIP  |      yes       |                |
-| HunterHow   |      yes       |                |
+| Name        | Login required |
+|-------------|----------------|
+| ZoomEye     | yes            |
+| Shodan      | yes            |
+| Fofa        | no             |
+| VirusTotal  | yes            |
+| BinaryEdge  | yes            |
+| Netlas      | no             |
+| Censys      | no             |
+| ODIN        | no             |
+| CriminalIP  | yes            |
+| HunterHow   | yes            |
 
 ## Use cases
 
 - Search for phishing domains & brand protection
- - [Andrea Fortuna: Favicon Forensics: hunting phishing sites with Shodan](https://andreafortuna.org/2024/09/18/unmasking-digital-deception-leveraging-shodan-and-favicon-hashes-to-detect-phishing-sites)
+    - [Andrea Fortuna: Favicon Forensics: hunting phishing sites with Shodan](https://andreafortuna.org/2024/09/18/unmasking-digital-deception-leveraging-shodan-and-favicon-hashes-to-detect-phishing-sites)
 - Extend your scope for pentesting
- - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
+   - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
 - Search for C2 (command and control) servers of hackers
 - Research purposes
 
