@@ -12,8 +12,10 @@ Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
 ## Usage
 
-There are 3 search modes: by direct favicon URL, by file,
-and by domain (guessing possible favicons).
+There are 3 search modes:
+* search by direct favicon URL;
+* search by file;
+* and search by domain (guessing possible favicons).
 
 Search by a specific favicon URL (`--uri`, `-u`):
 ```sh
@@ -78,7 +80,7 @@ export NETLAS_KEY=...
 - Extend your scope for pentesting
    - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
 - Search for C2 (command and control) servers of hackers
-- Research purposes
+- Research purposes, you have to think bigger
 
 ## Other relevant tools
 
