@@ -4,7 +4,7 @@
 
 ## The mechanism
 
-Favicorn takes a favicon and provides search result links across 10 platforms.
+Favicorn takes a favicon and provides search result links across 10 platforms, and not only.
 
 Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
