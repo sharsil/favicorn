@@ -36,13 +36,14 @@ Search by a domain, resolving to IPs and checking their favicons (`--domain`, `-
 
 Show favicon hashes for a search (`--verbose`): `./favicorn.py -d google.com -v`
 
-Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`):
-`./favicorn.py -d google.com -e`
+Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`): `./favicorn.py -d google.com -e`
 
 Save all links to the specific file (`-s`, `--save-links-filename`): `./favicorn.py -d google.com -s links.txt`
 
 Give tinyurl links instead of full links for platforms: `--tinyurl`
+
 Show only links to platforms, don't extract preview of results: `--no-fetch`
+
 Disable unicorn animation (dangerous option, use with caution!): `--no-logo`
 
 ## Preview of results
