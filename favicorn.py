@@ -349,7 +349,7 @@ class ZoomEyePreviewFetcher(Fetcher):
 
     def get_info(self, favicon):
         """Fetch information from ZoomEye based on the favicon object."""
-        base_url = 'https://www.zoomeye.hk/api/search'
+        base_url = 'https://www.zoomeye.ai/api/search'
         headers = {
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,pt;q=0.6',
@@ -366,7 +366,7 @@ class ZoomEyePreviewFetcher(Fetcher):
         }
         
         url = f'{base_url}?q=iconhash%3A%22{favicon.murmur_hash}%22&page=1&t=v4%2Bv6%2Bweb'
-        referer = f'https://www.zoomeye.hk/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
+        referer = f'https://www.zoomeye.ai/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
         headers['Referer'] = referer
         
         response = None
