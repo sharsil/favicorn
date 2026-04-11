@@ -285,7 +285,7 @@ class ShodanPreviewAPIKeyFetcher(Fetcher):
         self.use_cache = use_cache
 
     @classmethod
-    def get_platform(self):
+    def get_platform(cls):
         return 'Shodan'
 
     def get_info(self, favicon):
@@ -344,7 +344,7 @@ class ZoomEyePreviewFetcher(Fetcher):
         self.use_cache = use_cache
 
     @classmethod
-    def get_platform(self):
+    def get_platform(cls):
         return 'ZoomEye'
 
     def get_info(self, favicon):
