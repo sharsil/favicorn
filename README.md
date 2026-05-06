@@ -8,7 +8,7 @@ Favicorn takes a favicon and provides search result links across 10 platforms, a
 
 Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
-![](https://raw.githubusercontent.com/soxoj/favicorn-dev/main/screenshot.png)
+![](https://raw.githubusercontent.com/sharsil/favicorn/main/screenshot.png)
 
 ## Usage
 

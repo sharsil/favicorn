@@ -20,7 +20,7 @@ import shodan
 from alive_progress import alive_bar
 from colorama import Fore, Style, init
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 init(autoreset=True)
 

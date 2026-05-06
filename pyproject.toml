@@ -4,13 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "favicorn-osint"
-version = "0.1.0"
+version = "0.1.1"
 description = "All-sources tool to search websites by favicons"
 readme = "README.md"
 requires-python = ">=3.8"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
+    { name = "sharsil" },
+    { name = "Soxoj", email = "soxoj@protonmail.com" },
+]
+maintainers = [
     { name = "Soxoj", email = "soxoj@protonmail.com" },
 ]
 keywords = ["favicon", "osint", "shodan", "zoomeye", "netlas", "censys", "fofa"]
@@ -42,9 +46,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/soxoj/favicorn-dev"
-Repository = "https://github.com/soxoj/favicorn-dev"
-Issues = "https://github.com/soxoj/favicorn-dev/issues"
+Homepage = "https://github.com/sharsil/favicorn"
+Repository = "https://github.com/sharsil/favicorn"
+Issues = "https://github.com/sharsil/favicorn/issues"
 
 [project.scripts]
 favicorn = "favicorn.cli:main"
