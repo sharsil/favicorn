@@ -10,6 +10,21 @@ Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
 ![](https://raw.githubusercontent.com/sharsil/favicorn/main/screenshot.png)
 
+## Installation
+
+```sh
+pip install favicorn-osint
+```
+
+This installs the `favicorn` command. You can also run it as a module: `python -m favicorn`.
+
+To install from source instead:
+```sh
+git clone https://github.com/sharsil/favicorn.git
+cd favicorn
+pip install -e .
+```
+
 ## Usage
 
 There are 3 search modes:
@@ -19,27 +34,27 @@ There are 3 search modes:
 
 Search by a specific favicon URL (`--uri`, `-u`):
 ```sh
-./favicorn.py -u https://emojipedia.org/images/favicon-32x32.png
+favicorn -u https://emojipedia.org/images/favicon-32x32.png
 ```
 
 Search by a favicon file (`--file`, `-f`):
 ```sh
-./favicorn.py -f test-favicon.png
+favicorn -f test-favicon.png
 ```
 
 Search by a domain, resolving to IPs and checking their favicons (`--domain`, `-d`):
 ```sh
-./favicorn.py -d google.com
+favicorn -d google.com
 ```
 
 ### Additional options
 
-Show favicon hashes for a search (`--verbose`): `./favicorn.py -d google.com -v`
+Show favicon hashes for a search (`--verbose`): `favicorn -d google.com -v`
 
 Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`):
-`./favicorn.py -d google.com -e`
+`favicorn -d google.com -e`
 
-Save all links to the specific file (`-s`, `--save-links-filename`): `./favicorn.py -d google.com -s links.txt`
+Save all links to the specific file (`-s`, `--save-links-filename`): `favicorn -d google.com -s links.txt`
 
 Give tinyurl links instead of full links for platforms: `--tinyurl`
 Show only links to platforms, don't extract preview of results: `--no-fetch`
@@ -97,7 +112,7 @@ export NETLAS_KEY=...
 ## Testing
 
 ```sh
-python3 -m unittest test_favicorn.py
+python3 -m unittest discover tests
 ```
 
 ## Thanks :purple_heart:
