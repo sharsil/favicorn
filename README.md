@@ -4,18 +4,16 @@
 
 ## The mechanism
 
-Favicorn takes a favicon and provides search result links across 10 platforms, and not only.
+Favicorn takes a favicon and provides search result links across 10 platforms.
 
 Drop a ⭐ on the repo, and we’ll add automated scraping for all sources!
 
-![](screenshot.png)
+![](https://raw.githubusercontent.com/soxoj/favicorn-dev/main/screenshot.png)
 
 ## Usage
 
-There are 3 search modes:
-* search by direct favicon URL;
-* search by file;
-* and search by domain (guessing possible favicons).
+There are 3 search modes: by direct favicon URL, by file,
+and by domain (guessing possible favicons).
 
 Search by a specific favicon URL (`--uri`, `-u`):
 ```sh
@@ -36,14 +34,13 @@ Search by a domain, resolving to IPs and checking their favicons (`--domain`, `-
 
 Show favicon hashes for a search (`--verbose`): `./favicorn.py -d google.com -v`
 
-Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`): `./favicorn.py -d google.com -e`
+Get additional favicon versions using search engines (`--add-from-search-engines`, `-e`):
+`./favicorn.py -d google.com -e`
 
 Save all links to the specific file (`-s`, `--save-links-filename`): `./favicorn.py -d google.com -s links.txt`
 
 Give tinyurl links instead of full links for platforms: `--tinyurl`
-
 Show only links to platforms, don't extract preview of results: `--no-fetch`
-
 Disable unicorn animation (dangerous option, use with caution!): `--no-logo`
 
 ## Preview of results
@@ -81,7 +78,7 @@ export NETLAS_KEY=...
 - Extend your scope for pentesting
    - [Devansh batham: Weaponizing favicon.ico for BugBounties , OSINT and what not](https://medium.com/@Asm0d3us/weaponizing-favicon-ico-for-bugbounties-osint-and-what-not-ace3c214e139)
 - Search for C2 (command and control) servers of hackers
-- Research purposes, you have to think bigger
+- Research purposes
 
 ## Other relevant tools
 
@@ -100,8 +97,3 @@ export NETLAS_KEY=...
 ```sh
 python3 -m unittest test_favicorn.py
 ```
-
-## Thanks :purple_heart:
-
-Thanks for [@soxoj](https://github.com/soxoj), who was an inspirer, muse, auditor of my pure code and for his huge peace of development. Also i'm grateful for one of the most vibrant OSINT communities for testing this project. Do not hesitate to provide something interesting or fix our bugs! But don't forget, it's not a just another boring swiss-knife.
-

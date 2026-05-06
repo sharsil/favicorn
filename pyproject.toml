@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "favicorn-osint"
+version = "0.1.0"
+description = "All-sources tool to search websites by favicons"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Soxoj", email = "soxoj@protonmail.com" },
+]
+keywords = ["favicon", "osint", "shodan", "zoomeye", "netlas", "censys", "fofa"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Security",
+]
+dependencies = [
+    "alive-progress>=3.0",
+    "colorama>=0.4",
+    "dnspython>=2.0",
+    "favicon>=0.7",
+    "mmh3>=4.0",
+    "netlas>=0.5",
+    "requests>=2.30",
+    "shodan>=1.30",
+]
+
+[project.urls]
+Homepage = "https://github.com/soxoj/favicorn-dev"
+Repository = "https://github.com/soxoj/favicorn-dev"
+Issues = "https://github.com/soxoj/favicorn-dev/issues"
+
+[project.scripts]
+favicorn = "favicorn.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
