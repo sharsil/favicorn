@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
+"""favicorn: search websites by favicon hash across multiple sources."""
 
-import argparse
 import codecs
 import concurrent.futures
 import hashlib
@@ -8,75 +7,31 @@ import io
 import json
 import mimetypes
 import os
-import random
 import re
-import sys
-import time
 from contextlib import closing
-# tinyurl
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-import favicon
+import dns.resolver
+import mmh3
 import netlas
 import requests
-# fetchers
 import shodan
 from alive_progress import alive_bar
 from colorama import Fore, Style, init
 
-requests.packages.urllib3.disable_warnings()
-init(autoreset=True)
+__version__ = "0.1.1"
 
+init(autoreset=True)
 
 OUTPUT_DIR = "api_responses"
 
-try:
-    import dns.resolver, mmh3
-except ImportError as e:
-    print("[-] {}. Please, install all required dependencies!".format(e))
-    sys.exit(1)
-
 
 def make_url_tiny(url):
-    request_url = f"http://tinyurl.com/api-create.php?{urlencode({'url':url})}"
+    request_url = f"http://tinyurl.com/api-create.php?{urlencode({'url': url})}"
     with closing(urlopen(request_url)) as response:
         return response.read().decode("utf-8")
 
-def clear_terminal():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def print_ascii_art():
-    clear_terminal()
-    ascii_art = [['\033[33m+\033[0m' if char == '+' else '\033[1;35m' + char + '\033[0m' for char in line.ljust(45)]
-                 for line in r"""             +           +              
-                                  +         
-             +     /                   +    
-                  /       +                 
-                 +                  +       
-          +                ,               +
-                          /|                
-                \        / ->         \     
-        +        \,_    /  ->     +    \    
-                 /0(``  \  ->           \   
-                (, /"(``-\_/_--_         +  
-                      \ )___(  )\\.         
-                      |/     \/  \\\        
-                      \\     /\             
-                      o o   o  o            
-                                            """.split("\n")]
-    dim_x, dim_y = len(ascii_art[0]), len(ascii_art)
-    mask = [['O' for _ in range(dim_x)] for _ in range(dim_y)]
-    available_positions = [(y, x) for y in range(dim_y) for x in range(dim_x)]
-    while available_positions:
-        for _ in ascii_art:
-            print("\033[F", end='')
-        y, x = random.choice(available_positions)
-        available_positions.remove((y, x))
-        mask[y][x] = 0
-        for dy, line in enumerate(ascii_art):
-            print(''.join(mask[dy][dx] or line[dx] for dx in range(dim_x)), flush=os.name != 'nt')
-        time.sleep(0.001)
 
 class Favicon:
     def __init__(self, content, source=None, type=None, tinyurl=False):
@@ -112,7 +67,7 @@ class Favicon:
         request_data = "https://app.netlas.io/api/get_perceptual_hash/"
         try:
             if source.startswith('http'):
-                response = requests.get(request_url+source)
+                response = requests.get(request_url + source)
                 return response.json().get("average_hash")
             else:
                 files = {'file': ('favicon.png', io.BytesIO(content), 'image/png')}
@@ -131,7 +86,7 @@ class Favicon:
             favi_words = ['image', 'icon']
             content_type = response.headers['Content-Type']
 
-            if not any(re.findall('|'.join(favi_words) , content_type)):
+            if not any(re.findall('|'.join(favi_words), content_type)):
                 raise Exception(f"Invalid content-type {str(content_type)} for URL: {url}")
 
             content = response.content
@@ -219,14 +174,12 @@ class Favicon:
     def links_text(self):
         """Generate the same text output as the original function with aligned columns"""
         links_dict = self.generate_links_dict()
-        
-        # Find the longest platform name to adjust alignment
+
         max_platform_length = max(len(platform) for platform in links_dict.keys())
-        
-        # Format links with colored platform names and links
+
         links_bundle = '\n'.join([
             f'{Style.BRIGHT}{Fore.CYAN}{(platform+":").ljust(max_platform_length + 5)}'
-            f'{Fore.GREEN}{link}' 
+            f'{Fore.GREEN}{link}'
             for platform, link in links_dict.items()
         ])
         return links_bundle + '\n'
@@ -262,7 +215,7 @@ class Fetcher:
     def _format_output(cls, total_results_count, domains, ip_addresses_by_waf, murmur_hash, favicon_name):
         """Format the output to display the total results count, domains, and IP addresses."""
         if not total_results_count:
-                return f"\n{Style.BRIGHT}{Fore.BLUE}No results found in {cls.get_platform()} for {favicon_name}"
+            return f"\n{Style.BRIGHT}{Fore.BLUE}No results found in {cls.get_platform()} for {favicon_name}"
 
         def make_header(header):
             return f'{Fore.CYAN}{Style.BRIGHT}{header}{Style.NORMAL}'
@@ -285,7 +238,7 @@ class ShodanPreviewAPIKeyFetcher(Fetcher):
         self.use_cache = use_cache
 
     @classmethod
-    def get_platform(self):
+    def get_platform(cls):
         return 'Shodan'
 
     def get_info(self, favicon):
@@ -295,7 +248,7 @@ class ShodanPreviewAPIKeyFetcher(Fetcher):
         try:
             result = None
             if self.use_cache:
-                result = ShodanPreviewAPIKeyFetcher._load_response_from_file(favicon.murmur_hash) # cached
+                result = ShodanPreviewAPIKeyFetcher._load_response_from_file(favicon.murmur_hash)
 
             if not result:
                 result = api.search(f'http.favicon.hash:{murmur_hash}')
@@ -317,15 +270,13 @@ class ShodanPreviewAPIKeyFetcher(Fetcher):
 
         matches = data.get('matches', [])
         for match in matches:
-            # Extract domain (if available)
             hostnames = match.get('hostnames', [])
             if hostnames:
                 domains.append(f"{hostnames[0]}:{match.get('port')}")
 
-            # Extract IP addresses
             ip = match.get('ip_str', '')
             if ip:
-                ips = [ip]  # Wrap in list to unify with other methods
+                ips = [ip]
             else:
                 ips = []
 
@@ -344,12 +295,12 @@ class ZoomEyePreviewFetcher(Fetcher):
         self.use_cache = use_cache
 
     @classmethod
-    def get_platform(self):
+    def get_platform(cls):
         return 'ZoomEye'
 
     def get_info(self, favicon):
         """Fetch information from ZoomEye based on the favicon object."""
-        base_url = 'https://www.zoomeye.ai/api/search'
+        base_url = 'https://www.zoomeye.hk/api/search'
         headers = {
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9,ru-RU;q=0.8,ru;q=0.7,pt;q=0.6',
@@ -364,16 +315,16 @@ class ZoomEyePreviewFetcher(Fetcher):
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"macOS"',
         }
-        
+
         url = f'{base_url}?q=iconhash%3A%22{favicon.murmur_hash}%22&page=1&t=v4%2Bv6%2Bweb'
-        referer = f'https://www.zoomeye.ai/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
+        referer = f'https://www.zoomeye.hk/searchResult?q=iconhash%3A%22{favicon.murmur_hash}%22'
         headers['Referer'] = referer
-        
+
         response = None
         data = {}
 
         if self.use_cache:
-            data = ZoomEyePreviewFetcher._load_response_from_file(favicon.murmur_hash) # cached
+            data = ZoomEyePreviewFetcher._load_response_from_file(favicon.murmur_hash)
             response = data
 
         if not response:
@@ -423,7 +374,7 @@ class ZoomEyePreviewFetcher(Fetcher):
 
 class NetlasPreviewAPIKeyFetcher(Fetcher):
     """Stateless fetcher for getting results from Netlas based on favicon hash."""
-    
+
     def __init__(self, api_key, use_cache=True):
         self.api_key = api_key
         self.use_cache = use_cache
@@ -440,7 +391,7 @@ class NetlasPreviewAPIKeyFetcher(Fetcher):
         try:
             result = None
             if self.use_cache:
-                result = NetlasPreviewAPIKeyFetcher._load_response_from_file(murmur_hash)  # cached response
+                result = NetlasPreviewAPIKeyFetcher._load_response_from_file(murmur_hash)
 
             if not result:
                 query_string = f'http.favicon.hash_sha256:{favicon.sha256_hash}'
@@ -471,7 +422,7 @@ class NetlasPreviewAPIKeyFetcher(Fetcher):
                 domains.append(f"{site}:{port}")
 
             ip = match_data.get('ip')
-            if ip and not ip in ip_addresses_by_waf['No WAF']:
+            if ip and ip not in ip_addresses_by_waf['No WAF']:
                 ip_addresses_by_waf['No WAF'].append(ip)
 
         domains = list(set(domains))
@@ -483,7 +434,6 @@ def run_fetchers(favicons, fetchers):
     """Run fetchers in parallel with a spinning progress bar and print results sequentially."""
     results = []
 
-    # Prepare a list of tasks (fetchers for each favicon)
     tasks = [(fetcher, favicon) for favicon in favicons for fetcher in fetchers]
 
     with alive_bar(len(tasks), title="Fetching some results...") as bar:
@@ -495,7 +445,7 @@ def run_fetchers(favicons, fetchers):
                     results.append(future.result())
                 except Exception as e:
                     results.append(([], {}, f"Error occurred: {e}"))
-                bar()  # Update the progress bar
+                bar()
 
     return results
 
@@ -506,9 +456,6 @@ def make_se_links(domain):
         ('Google 32x32', f'https://www.google.com/s2/favicons?domain={domain}&size=32'),
         ('DuckDuckGo', f'https://icons.duckduckgo.com/ip3/{domain}.ico'),
         ('Icon Horse', f'https://icon.horse/icon/{domain}'),
-        # Useless
-        # ('Unavatar', f'https://unavatar.io/{domain}'),
-        # ('Yandex', f'https://favicon.yandex.net/favicon/{domain}'),
     ]
     return links_bundle
 
@@ -519,172 +466,9 @@ def resolve_domain(domain):
         resolver.nameservers = ['8.8.8.8', '8.8.4.4',
                                 '1.1.1.1', '1.0.0.1']
         dns_answer = resolver.resolve(domain, 'A')
-        ip_list = [ ip.to_text() for ip in dns_answer ]
+        ip_list = [ip.to_text() for ip in dns_answer]
         return ip_list
 
     except Exception as e:
         print(f'[-] {e}')
         return []
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Get favicon hashes from multiple sources"
-    )
-
-    search_modes = parser.add_mutually_exclusive_group(required=True)
-    search_modes.add_argument("-u", "--uri", help="Get favicon hash from WEB")
-    search_modes.add_argument("-f", "--file", help="Get favicon hash from a specific file")
-    search_modes.add_argument("-d", "--domain", help="Get favicon hash from resolved domain")
-
-    parser.add_argument("-e", "--add-from-search-engines", action="store_true",
-                        help="Get additional favicon versions using search engines")
-    parser.add_argument("--tinyurl", action="store_true",
-                        help="Get short links for results with TinyURL")
-    parser.add_argument("--no-fetch", action="store_true", default=False,
-                        help="Don't fetch results from engines")
-    parser.add_argument("-v", "--verbose", action="store_true", default=False,
-                        help="Verbose (show hashes)")
-    parser.add_argument("--no-logo", action="store_true", default=False,
-                        help="Disable unicorn animation (dangerous option, use with caution!)")
-    parser.add_argument("-s", "--save-links-filename", type=str, help="Save links to a text file")
-    args = parser.parse_args()
-
-    if not args.no_logo:
-        print_ascii_art()
-
-    selist = []
-    favicons = []
-
-    fetchers = [
-        ZoomEyePreviewFetcher(use_cache=True),
-    ]
-
-    SHODAN_KEY = os.getenv('SHODAN_KEY')
-    NETLAS_KEY = os.getenv('NETLAS_KEY')
-    if SHODAN_KEY:
-        fetchers.append(ShodanPreviewAPIKeyFetcher(SHODAN_KEY))
-    fetchers.append(NetlasPreviewAPIKeyFetcher(NETLAS_KEY))
-
-    if args.uri:
-        if args.uri.count('/') >= 3 and not args.uri.endswith('/'):
-            print(f"Searching by favicon from direct link {args.uri}...")
-            try:
-                favicon = Favicon.from_url(args.uri)
-                favicons.append(favicon)
-            except Exception as e:
-                print(f"[-] Failed to fetch favicon: {e}")
-        else:
-            print(f"[-] Is it correct or full URI: '{args.uri}'?")
-
-    elif args.file:
-        print(f"Searching by favicon from file {os.path.abspath(args.file)}...")
-        try:
-            favicon = Favicon.from_file(args.file)
-            favicons.append(favicon)
-        except Exception as e:
-            print(f"[-] Failed to load favicon from file: {e}")
-
-    elif args.domain:
-        # Try to find favicons on domain
-        print(f"Searching by possible favicons from domain {args.domain}...")
-        icons = []
-        try:
-            icons = favicon.get(f"http://{args.domain}")
-        except Exception as e:
-            print(f'[!] Unable to guess favicons for {args.domain}: {e}')
-        if icons:
-            icon_urls = ', '.join([icon.url for icon in icons])
-            print(f'[-] Found {len(icons)} favicons for {args.domain}: {icon_urls}')
-            unique_favicons = set(favicons)
-            for icon in icons:
-                if icon.width not in (32, 0):
-                    continue
-                try:
-                    new_favicon = Favicon.from_url(icon.url, custom_type=f'guessed favicons of {args.domain}')
-                    if new_favicon not in unique_favicons:
-                        favicons.append(new_favicon)
-                        unique_favicons.add(new_favicon)
-                except Exception as e:
-                    print(f"Error processing found favicon from URL {icon.url} for {args.domain}: {e}")
-
-        # Try to get favicons from all related IPs
-        ips = resolve_domain(args.domain)
-        for ip in ips:
-            try:
-                favicon = Favicon.from_url(f"http://{ip}/favicon.ico", custom_type=f"resolved domain '{args.domain}'")
-                unique_favicons = set(favicons)
-                if favicon and not favicon in unique_favicons:
-                    favicons.append(favicon)
-            except Exception as e:
-                print(f'[-] Error {e} for {ip}')
-
-    if args.add_from_search_engines and args.domain:
-        unique_favicons = set(favicons)
-        urls = make_se_links(args.domain)
-        for url in urls:
-            try:
-                new_favicon = Favicon.from_url(url[1], custom_type=f'search engine {url[0]}')
-                if new_favicon not in unique_favicons:
-                    favicons.append(new_favicon)
-                    unique_favicons.add(new_favicon)
-            except Exception as e:
-                print(f"Error processing favicon from URL {url} from search engine {url[0]}: {e}")
-
-    preview_results = []
-    preview_file = '_preview_results.txt'
-    were_links_saved = False
-    no_results = False
-
-    if favicons:
-        for favicon in favicons:
-            favicon.tinyurl = args.tinyurl
-            print(f"Results for favicon from {favicon.type}: {favicon.source}\n")
-            if args.verbose:
-                print(favicon.hashes_text()+'\n')
-            print(favicon.links_categorized_text())
-            if args.save_links_filename:
-                with open(args.save_links_filename, "a") as f:
-                    were_links_saved = True
-                    f.write(favicon.links_only_text())
-
-        if args.no_fetch:
-            print("Fetching of results is disabled, exiting.")
-        else:
-            all_domains = set()
-            all_ips = set()
-            results = run_fetchers(favicons, fetchers)
-            for r in results:
-                domains, ips_dict, output = r
-                all_domains |= set(domains)
-                for name, ips in ips_dict.items():
-                    if 'cloudflare' in name.lower():
-                        continue
-                    all_ips |= set(ips)
-
-                print(output)
-
-            preview_results = sorted(list(all_domains)) + sorted(list(all_ips))
-            if preview_results:
-                filename = f'{favicon.murmur_hash}{preview_file}'.replace('-', '_')
-                path = os.path.join(OUTPUT_DIR, filename)
-                with open(filename, 'w') as file:
-                    file.write('\n'.join(preview_results))
-                    print(f'{Fore.GREEN}Preview results for favicon with MurmurHash {favicon.murmur_hash} saved to {path}')
-            else:
-                no_results = True
-    else:
-        print("No results.")
-        no_results = True
-
-    if no_results:
-        if args.file:
-            print(f'{Fore.YELLOW}Try to specify as an input a domain with -d or an url of favicon with -u!')
-        elif args.uri:
-            print(f'{Fore.YELLOW}Try to specify as an input a domain with -d or a PNG/ICO file of favicon with -f!')
-        elif args.domain:
-            print(f'{Fore.YELLOW}Try to specify as an input an url of favicon with -u or a PNG/ICO file of favicon with -f!')
-
-    if were_links_saved:
-        print(f'{Fore.GREEN}All links saved to {os.path.abspath(args.save_links_filename)}')
-

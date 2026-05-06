@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include test-favicon.png
+graft tests
+global-exclude __pycache__
+global-exclude *.py[cod]
